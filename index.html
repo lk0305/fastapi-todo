@@ -86,6 +86,37 @@
         box-shadow: 0 8px 18px rgba(79, 70, 229, 0.2);
       }
 
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
+      .todo-actions {
+        display: flex;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .todo-actions button {
+        padding: 8px 12px;
+        font-size: 0.875rem;
+      }
+
+      .complete-btn {
+        background: var(--success);
+      }
+
+      .delete-btn {
+        background: #ef4444;
+      }
+
+      .todo-item.completed .todo-text {
+        color: var(--muted);
+        text-decoration: line-through;
+      }
+
       .todo-list {
         list-style: none;
         margin: 0;
@@ -143,8 +174,18 @@
           flex-direction: column;
         }
 
-        button {
+        #addBtn {
           width: 100%;
+        }
+
+        .todo-item {
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+
+        .todo-actions {
+          width: 100%;
+          justify-content: flex-end;
         }
       }
     </style>
@@ -190,7 +231,30 @@
         }
 
         todoList.innerHTML = todos
-          .map((todo) => `<li class="todo-item"><span class="todo-text">${escapeHtml(todo)}</span></li>`)
+          .map((todo) => `
+            <li class="todo-item${todo.completed ? ' completed' : ''}">
+              <span class="todo-text">${escapeHtml(todo.content)}</span>
+              <div class="todo-actions">
+                <button
+                  class="complete-btn"
+                  type="button"
+                  data-action="complete"
+                  data-id="${todo.id}"
+                  ${todo.completed ? 'disabled' : ''}
+                >
+                  ${todo.completed ? '已完成' : '完成'}
+                </button>
+                <button
+                  class="delete-btn"
+                  type="button"
+                  data-action="delete"
+                  data-id="${todo.id}"
+                >
+                  删除
+                </button>
+              </div>
+            </li>
+          `)
           .join('');
       }
 
@@ -234,7 +298,31 @@
         }
       }
 
+      async function updateTodo(todoId, method) {
+        try {
+          const response = await fetch(`${API_URL}/${todoId}`, { method });
+          if (!response.ok) {
+            throw new Error(`${method} 请求失败`);
+          }
+
+          await loadTodos();
+        } catch (error) {
+          alert(method === 'PUT' ? '完成失败，请稍后重试' : '删除失败，请稍后重试');
+          console.error(error);
+        }
+      }
+
       addBtn.addEventListener('click', addTodo);
+
+      todoList.addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-action]');
+        if (!button) {
+          return;
+        }
+
+        const method = button.dataset.action === 'complete' ? 'PUT' : 'DELETE';
+        updateTodo(button.dataset.id, method);
+      });
 
       todoInput.addEventListener('keydown', (event) => {
         if (event.key === 'Enter') {
